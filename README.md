@@ -1,6 +1,6 @@
 # Fetching Ball Vex Exp Robot
 ## Desciption: 
-This is a Vex Exp robot which can search for a red object (the ball), and when it has found the object, it will grab it and return to the original position. 
+This is a Vex Exp robot which can search for a red object (the ball), and when it has found the object, it will grab it and return to the original position. Here is the demonstration/presentation video: https://youtube.com/shorts/gLiFjTAw0eY?feature=share 
 
 ## The tasks:
 1. Turn left for 45 degrees, and move forward 150 mm to search for the red object. Record to the movement log.
