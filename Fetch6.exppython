@@ -1,1 +1,145 @@
-{"mode":"Text","hardwareTarget":"brain","textContent":"#region VEXcode Generated Robot Configuration\nfrom vex import *\nimport urandom\n\n# Brain should be defined by default\nbrain = Brain()\n\n# Robot configuration code\nbrain_inertial = Inertial()\nleft_drive_smart = Motor(Ports.PORT6, False)\nright_drive_smart = Motor(Ports.PORT10, True)\ndrivetrain = SmartDrive(left_drive_smart, right_drive_smart, brain_inertial, 259.34, 320, 40, MM, 1)\noptical_1 = Optical(Ports.PORT1)\ndistance_2 = Distance(Ports.PORT2)\nmotor_4 = Motor(Ports.PORT4, False)\nmotor_3 = Motor(Ports.PORT3, False)\n\n\n# Wait for sensor(s) to fully initialize\nwait(100, MSEC)\n\n# generating and setting random seed\ndef initializeRandomSeed():\n    wait(100, MSEC)\n    xaxis = brain_inertial.acceleration(XAXIS) * 1000\n    yaxis = brain_inertial.acceleration(YAXIS) * 1000\n    zaxis = brain_inertial.acceleration(ZAXIS) * 1000\n    systemTime = brain.timer.system() * 100\n    urandom.seed(int(xaxis + yaxis + zaxis + systemTime)) \n\n# Initialize random seed \ninitializeRandomSeed()\n\nvexcode_initial_drivetrain_calibration_completed = False\ndef calibrate_drivetrain():\n    # Calibrate the Drivetrain Inertial\n    global vexcode_initial_drivetrain_calibration_completed\n    sleep(200, MSEC)\n    brain.screen.print(\"Calibrating\")\n    brain.screen.next_row()\n    brain.screen.print(\"Inertial\")\n    brain_inertial.calibrate()\n    while brain_inertial.is_calibrating():\n        sleep(25, MSEC)\n    vexcode_initial_drivetrain_calibration_completed = True\n    brain.screen.clear_screen()\n    brain.screen.set_cursor(1, 1)\n\n\n# Calibrate the Drivetrain\ncalibrate_drivetrain()\n\n#endregion VEXcode Generated Robot Configuration\nfrom vex import *\nimport urandom\n\nbrain = Brain()\nbrain_inertial = Inertial()\nleft_drive_smart = Motor(Ports.PORT6, False)\nright_drive_smart = Motor(Ports.PORT10, True)\ndrivetrain = SmartDrive(left_drive_smart, right_drive_smart, brain_inertial, 259.34, 320, 40, MM, 1)\noptical_1 = Optical(Ports.PORT1)\ndistance_2 = Distance(Ports.PORT2)\nmotor_3 = Motor(Ports.PORT3, False)  # Claw up/down \nmotor_4 = Motor(Ports.PORT4, False)  #Claw grab\n\nwait(100, MSEC)\n\ndef track_red_object():\n    RED_HUE_MIN = 0\n    RED_HUE_MAX = 30\n    last_distance = 0\n    arm_raised = False\n    movement_log = [] #This is for the tracking the movement to return \n\n    motor_3.set_velocity(30, PERCENT)\n\n    while True:\n        optical_1.set_light(LedStateType.ON)\n        distance = distance_2.object_distance(MM)\n        hue = optical_1.hue()\n        red_detected = optical_1.is_near_object() and RED_HUE_MIN <= hue <= RED_HUE_MAX\n\n        print(\"Hue: {:.2f}, Distance: {:.2f} mm\".format(hue, distance)) #print distance at console \n\n        if red_detected:\n            if 10 <= distance <= 20:\n                drivetrain.stop() #when it has found the red object and grab it \n                print(\"Red object in range! Grabbing...\")\n\n                motor_4.spin_for(FORWARD, 90, DEGREES) #spin the claw forward 90 degree to grab the object\n                wait(300, MSEC) #wait 0.3 sec \n\n                last_distance = distance # store the current distance from the object\n                arm_raised = True # Set a flag to remember that the arm has been lifted\n\n                print(\"Lifting arm...\")\n                motor_3.set_max_torque(100, PERCENT)\n                motor_3.spin_for(FORWARD, 300, DEGREES) #lift up for 300 degree \n                wait(200, MSEC) #wait for 0.2 sec\n\n                print(\"Object secured. Returning to start...\")\n\n                # Reverse the movement\n                for action in reversed(movement_log):\n                    if action[0] == \"move\":\n                        drivetrain.drive_for(REVERSE, action[1], action[2])\n                    elif action[0] == \"turn\":\n                        # turn back opposite direction\n                        reverse_dir = RIGHT if action[2] == LEFT else LEFT\n                        drivetrain.turn_for(reverse_dir, action[1], DEGREES)\n\n                motor_3.spin_for(REVERSE, 300, DEGREES)\n                motor_4.spin_for(REVERSE, 100, DEGREES)\n\n                print(\"Object dropped at start point. Done.\")\n                break\n\n            elif distance > 20:\n                print(\"Approaching red object...\")\n                drivetrain.set_drive_velocity(15, PERCENT) #so it doesn't bounce the ball\n                drivetrain.drive_for(FORWARD, 50, MM) #move forward to approach the ball \n                movement_log.append((\"move\", 50, MM))\n\n            elif arm_raised and distance < last_distance - 10:\n                print(\"Object moved up! Lifting more...\")\n                motor_3.spin_for(FORWARD, 50, DEGREES) \n                last_distance = distance\n\n            # else:\n            #     drivetrain.stop()\n            #     print(\"Too close! Holding position.\")\n        else:\n            drivetrain.set_drive_velocity(30, PERCENT)\n            drivetrain.turn_for(LEFT, 45, DEGREES)  # turn a little to search the red object \n            movement_log.append((\"turn\", 45, LEFT))\n            drivetrain.drive_for(FORWARD, 150, MM) #go forward 150 MM to search red object \n            movement_log.append((\"move\", 150, MM))\n            print(\"Searching for red object...\")\n\n        wait(100, MSEC)\n\n\n\ntrack_red_object() ","textLanguage":"python","robotConfig":[{"port":[6,10,null],"name":"drivetrain","customName":false,"deviceType":"Drivetrain","deviceClass":"smartdrive","setting":{"type":"2-motor","wheelSize":"wheel325in","gearRatio":"1:1","direction":"fwd","gyroType":"integrated","width":"295","unit":"mm","wheelbase":"40","wheelbaseUnit":"mm","xOffset":"0","xOffsetUnit":"mm","yOffset":"0","yOffsetUnit":"mm","thetaOffset":"180"},"triportSourcePort":null},{"port":[1],"name":"optical_1","customName":false,"deviceType":"Optical","deviceClass":"optical","setting":{},"triportSourcePort":22},{"port":[2],"name":"distance_2","customName":false,"deviceType":"Distance","deviceClass":"distance","setting":{},"triportSourcePort":22},{"port":[4],"name":"motor_4","customName":false,"deviceType":"Motor","deviceClass":"motor","setting":{"reversed":"false","fwd":"forward","rev":"reverse"},"triportSourcePort":22},{"port":[3],"name":"motor_3","customName":false,"deviceType":"Motor","deviceClass":"motor","setting":{"reversed":"false","fwd":"forward","rev":"reverse"},"triportSourcePort":22}],"slot":0,"platform":"EXP","sdkVersion":"20240802.15.00.00","appVersion":"4.0.7","fileFormat":"2.0.0","targetBrainGen":"First","v5SoundsEnabled":false}
+#region VEXcode Generated Robot Configuration
+from vex import *
+import urandom
+
+# Brain should be defined by default
+brain = Brain()
+
+# Robot configuration code
+brain_inertial = Inertial()
+left_drive_smart = Motor(Ports.PORT6, False)
+right_drive_smart = Motor(Ports.PORT10, True)
+drivetrain = SmartDrive(left_drive_smart, right_drive_smart, brain_inertial, 259.34, 320, 40, MM, 1)
+optical_1 = Optical(Ports.PORT1)
+distance_2 = Distance(Ports.PORT2)
+motor_4 = Motor(Ports.PORT4, False)
+motor_3 = Motor(Ports.PORT3, False)
+
+
+# Wait for sensor(s) to fully initialize
+wait(100, MSEC)
+
+# generating and setting random seed
+def initializeRandomSeed():
+    wait(100, MSEC)
+    xaxis = brain_inertial.acceleration(XAXIS) * 1000
+    yaxis = brain_inertial.acceleration(YAXIS) * 1000
+    zaxis = brain_inertial.acceleration(ZAXIS) * 1000
+    systemTime = brain.timer.system() * 100
+    urandom.seed(int(xaxis + yaxis + zaxis + systemTime)) 
+
+# Initialize random seed 
+initializeRandomSeed()
+
+vexcode_initial_drivetrain_calibration_completed = False
+def calibrate_drivetrain():
+    # Calibrate the Drivetrain Inertial
+    global vexcode_initial_drivetrain_calibration_completed
+    sleep(200, MSEC)
+    brain.screen.print("Calibrating")
+    brain.screen.next_row()
+    brain.screen.print("Inertial")
+    brain_inertial.calibrate()
+    while brain_inertial.is_calibrating():
+        sleep(25, MSEC)
+    vexcode_initial_drivetrain_calibration_completed = True
+    brain.screen.clear_screen()
+    brain.screen.set_cursor(1, 1)
+
+
+# Calibrate the Drivetrain
+calibrate_drivetrain()
+
+#endregion VEXcode Generated Robot Configuration
+from vex import *
+import urandom
+
+brain = Brain()
+brain_inertial = Inertial()
+left_drive_smart = Motor(Ports.PORT6, False)
+right_drive_smart = Motor(Ports.PORT10, True)
+drivetrain = SmartDrive(left_drive_smart, right_drive_smart, brain_inertial, 259.34, 320, 40, MM, 1)
+optical_1 = Optical(Ports.PORT1)
+distance_2 = Distance(Ports.PORT2)
+motor_3 = Motor(Ports.PORT3, False)  # Claw up/down 
+motor_4 = Motor(Ports.PORT4, False)  #Claw grab
+
+wait(100, MSEC)
+
+def track_red_object():
+    RED_HUE_MIN = 0
+    RED_HUE_MAX = 30
+    last_distance = 0
+    arm_raised = False
+    movement_log = [] #This is for the tracking the movement to return 
+
+    motor_3.set_velocity(30, PERCENT)
+
+    while True:
+        optical_1.set_light(LedStateType.ON)
+        distance = distance_2.object_distance(MM)
+        hue = optical_1.hue()
+        red_detected = optical_1.is_near_object() and RED_HUE_MIN <= hue <= RED_HUE_MAX
+
+        print("Hue: {:.2f}, Distance: {:.2f} mm".format(hue, distance)) #print distance at console 
+
+        if red_detected:
+            if 10 <= distance <= 20:
+                drivetrain.stop() #when it has found the red object and grab it 
+                print("Red object in range! Grabbing...")
+
+                motor_4.spin_for(FORWARD, 90, DEGREES) #spin the claw forward 90 degree to grab the object
+                wait(300, MSEC) #wait 0.3 sec 
+
+                last_distance = distance # store the current distance from the object
+                arm_raised = True # Set a flag to remember that the arm has been lifted
+
+                print("Lifting arm...")
+                motor_3.set_max_torque(100, PERCENT)
+                motor_3.spin_for(FORWARD, 300, DEGREES) #lift up for 300 degree 
+                wait(200, MSEC) #wait for 0.2 sec
+
+                print("Object secured. Returning to start...")
+
+                # Reverse the movement
+                for action in reversed(movement_log):
+                    if action[0] == "move":
+                        drivetrain.drive_for(REVERSE, action[1], action[2])
+                    elif action[0] == "turn":
+                        # turn back opposite direction
+                        reverse_dir = RIGHT if action[2] == LEFT else LEFT
+                        drivetrain.turn_for(reverse_dir, action[1], DEGREES)
+
+                motor_3.spin_for(REVERSE, 300, DEGREES)
+                motor_4.spin_for(REVERSE, 100, DEGREES)
+
+                print("Object dropped at start point. Done.")
+                break
+
+            elif distance > 20:
+                print("Approaching red object...")
+                drivetrain.set_drive_velocity(15, PERCENT) #so it doesn't bounce the ball
+                drivetrain.drive_for(FORWARD, 50, MM) #move forward to approach the ball 
+                movement_log.append(("move", 50, MM))
+
+            elif arm_raised and distance < last_distance - 10:
+                print("Object moved up! Lifting more...")
+                motor_3.spin_for(FORWARD, 50, DEGREES) 
+                last_distance = distance
+
+            # else:
+            #     drivetrain.stop()
+            #     print("Too close! Holding position.")
+        else:
+            drivetrain.set_drive_velocity(30, PERCENT)
+            drivetrain.turn_for(LEFT, 45, DEGREES)  # turn a little to search the red object 
+            movement_log.append(("turn", 45, LEFT))
+            drivetrain.drive_for(FORWARD, 150, MM) #go forward 150 MM to search red object 
+            movement_log.append(("move", 150, MM))
+            print("Searching for red object...")
+
+        wait(100, MSEC)
+
+
+
+track_red_object() 
